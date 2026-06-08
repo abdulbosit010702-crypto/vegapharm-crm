@@ -135,7 +135,7 @@
 
     <div class="input-group">
         <label>Создать Пароль</label>
-        <input type="text" id="repPass" placeholder="Минимум 6 символов">
+        <input type="text" id="repPass" placeholder="Минимум 6 symbols">
     </div>
 
     <div class="input-group">
@@ -155,71 +155,65 @@
 </div>
 
 <script>
-    // Проверяем, что скрипт вообще запустился
-    console.log("Скрипт загружен успешно");
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
     function handleLogin() {
-        try {
-            const userInp = document.getElementById('username').value.trim().toLowerCase();
-            const passInp = document.getElementById('password').value.trim();
-            const errorBlock = document.getElementById('errorBlock');
-            
-            errorBlock.style.display = 'none';
+        // Чистый мгновенный вход без отправки запросов во внешнюю сеть
+        const userInp = document.getElementById('username').value.trim().toLowerCase();
+        const passInp = document.getElementById('password').value.trim();
+        const errorBlock = document.getElementById('errorBlock');
+        
+        errorBlock.style.display = 'none';
 
-            if (userInp === "admin" && passInp === "vegapresident") {
-                document.getElementById('loginBlock').style.display = 'none';
-                document.getElementById('adminBlock').style.display = 'block';
-            } else {
-                errorBlock.style.display = 'block';
-            }
-        } catch (err) {
-            // Если упадет ошибка — мы увидим её на экране смартфона/ПК
-            alert("Ошибка в handleLogin: " + err.message);
+        if (userInp === "admin" && passInp === "vegapresident") {
+            // Переключаем экраны мгновенно внутри телефона
+            document.getElementById('loginBlock').style.display = 'none';
+            document.getElementById('adminBlock').style.display = 'block';
+        } else {
+            errorBlock.style.display = 'block';
         }
     }
 
     function createRepresentative() {
-        try {
-            const name = document.getElementById('repName').value.trim();
-            const login = document.getElementById('repLogin').value.trim();
-            const pass = document.getElementById('repPass').value.trim();
-            const group = document.getElementById('repGroup').value;
-            
-            const successBlock = document.getElementById('successBlock');
-            const errorBlock = document.getElementById('adminErrorBlock');
-            
-            successBlock.style.display = 'none';
-            errorBlock.style.display = 'none';
+        const name = document.getElementById('repName').value.trim();
+        const login = document.getElementById('repLogin').value.trim();
+        const pass = document.getElementById('repPass').value.trim();
+        const group = document.getElementById('repGroup').value;
+        
+        const successBlock = document.getElementById('successBlock');
+        const errorBlock = document.getElementById('adminErrorBlock');
+        
+        successBlock.style.display = 'none';
+        errorBlock.style.display = 'none';
 
-            if (!name || !login || !pass) {
-                errorBlock.textContent = "Заполните все поля!";
-                errorBlock.style.display = 'block';
-                return;
-            }
-
-            fetch('/api/create-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, login, pass, group })
-            })
-            .then(res => {
-                if (res.ok) {
-                    successBlock.style.display = 'block';
-                    document.getElementById('repName').value = '';
-                    document.getElementById('repLogin').value = '';
-                    document.getElementById('repPass').value = '';
-                } else {
-                    errorBlock.textContent = "Ошибка сервера.";
-                    errorBlock.style.display = 'block';
-                }
-            })
-            .catch(e => {
-                errorBlock.textContent = "Ошибка сети: " + e.message;
-                errorBlock.style.display = 'block';
-            });
-        } catch (err) {
-            alert("Ошибка в createRepresentative: " + err.message);
+        if (!name || !login || !pass) {
+            errorBlock.textContent = "Заполните все поля!";
+            errorBlock.style.display = 'block';
+            return;
         }
+
+        // Отправка данных на создание юзера в базу данных
+        fetch('/api/create-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, login, pass, group })
+        })
+        .then(res => {
+            if (res.ok) {
+                successBlock.style.display = 'block';
+                document.getElementById('repName').value = '';
+                document.getElementById('repLogin').value = '';
+                document.getElementById('repPass').value = '';
+            } else {
+                errorBlock.textContent = "Ошибка сервера при записи представителя.";
+                errorBlock.style.display = 'block';
+            }
+        })
+        .catch(e => {
+            errorBlock.textContent = "Ошибка сети.";
+            errorBlock.style.display = 'block';
+        });
     }
 </script>
 </body>
