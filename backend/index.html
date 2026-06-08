@@ -55,7 +55,6 @@
             color: #444444;
             margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         .input-group input, .input-group select {
             width: 100%;
@@ -65,12 +64,6 @@
             font-size: 15px;
             outline: none;
             background-color: #f8fafc;
-            transition: all 0.2s ease;
-        }
-        .input-group input:focus, .input-group select:focus {
-            border-color: #1a73e8;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
         }
         .btn {
             width: 100%;
@@ -83,10 +76,6 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
-            transition: background-color 0.2s ease;
-        }
-        .btn:active {
-            background-color: #155cb4;
         }
         .error-msg {
             color: #d93025;
@@ -105,9 +94,7 @@
             padding: 12px;
             border-radius: 10px;
         }
-        #adminBlock {
-            display: none;
-        }
+        #adminBlock { display: none; }
     </style>
 </head>
 <body>
@@ -117,12 +104,12 @@
     <div class="subtitle">Система управления (CRM)</div>
     
     <div class="input-group">
-        <label for="username">Логин</label>
+        <label>Логин</label>
         <input type="text" id="username" placeholder="Введите логин..." autocomplete="off">
     </div>
     
     <div class="input-group">
-        <label for="password">Пароль</label>
+        <label>Пароль</label>
         <input type="password" id="password" placeholder="Введите пароль...">
     </div>
     
@@ -137,22 +124,22 @@
     </div>
     
     <div class="input-group">
-        <label for="repName">ФИО Сотрудника</label>
-        <input type="text" id="repName" placeholder="Иванов Александр Петрович">
+        <label>ФИО Сотрудника</label>
+        <input type="text" id="repName" placeholder="Иванов Александр">
     </div>
 
     <div class="input-group">
-        <label for="repLogin">Создать Логин</label>
+        <label>Создать Логин</label>
         <input type="text" id="repLogin" placeholder="Например: alex_ivanov" autocomplete="off">
     </div>
 
     <div class="input-group">
-        <label for="repPass">Создать Пароль</label>
+        <label>Создать Пароль</label>
         <input type="text" id="repPass" placeholder="Минимум 6 символов">
     </div>
 
     <div class="input-group">
-        <label for="repGroup">Назначить продукцию / группу</label>
+        <label>Назначить группу</label>
         <select id="repGroup">
             <option value="Кардиология">Кардиология</option>
             <option value="Гастроэнтерология">Гастроэнтерология</option>
@@ -163,71 +150,76 @@
 
     <button class="btn" style="background-color: #28a745;" onclick="createRepresentative()">Создать представителя</button>
     
-    <div class="success-msg text-center" id="successBlock">Сотрудник успешно добавлен в базу данных!</div>
+    <div class="success-msg text-center" id="successBlock">Сотрудник добавлен в базу!</div>
     <div class="error-msg text-center" id="adminErrorBlock">Заполните все поля формы.</div>
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    // Проверяем, что скрипт вообще запустился
+    console.log("Скрипт загружен успешно");
 
     function handleLogin() {
-        // Убираем случайные пробелы и переводим в нижний регистр для защиты от ошибок на смартфонах
-        const userInp = document.getElementById('username').value.trim().toLowerCase();
-        const passInp = document.getElementById('password').value.trim();
-        const errorBlock = document.getElementById('errorBlock');
-        
-        errorBlock.style.display = 'none';
+        try {
+            const userInp = document.getElementById('username').value.trim().toLowerCase();
+            const passInp = document.getElementById('password').value.trim();
+            const errorBlock = document.getElementById('errorBlock');
+            
+            errorBlock.style.display = 'none';
 
-        // Жесткая проверка администратора (теперь admin сработает в любом регистре)
-        if (userInp === "admin" && passInp === "vegapresident") {
-            document.getElementById('loginBlock').style.display = 'none';
-            document.getElementById('adminBlock').style.display = 'block';
-        } else {
-            errorBlock.style.display = 'block';
+            if (userInp === "admin" && passInp === "vegapresident") {
+                document.getElementById('loginBlock').style.display = 'none';
+                document.getElementById('adminBlock').style.display = 'block';
+            } else {
+                errorBlock.style.display = 'block';
+            }
+        } catch (err) {
+            // Если упадет ошибка — мы увидим её на экране смартфона/ПК
+            alert("Ошибка в handleLogin: " + err.message);
         }
     }
 
     function createRepresentative() {
-        const name = document.getElementById('repName').value.trim();
-        const login = document.getElementById('repLogin').value.trim();
-        const pass = document.getElementById('repPass').value.trim();
-        const group = document.getElementById('repGroup').value;
-        
-        const successBlock = document.getElementById('successBlock');
-        const errorBlock = document.getElementById('adminErrorBlock');
-        
-        successBlock.style.display = 'none';
-        errorBlock.style.display = 'none';
+        try {
+            const name = document.getElementById('repName').value.trim();
+            const login = document.getElementById('repLogin').value.trim();
+            const pass = document.getElementById('repPass').value.trim();
+            const group = document.getElementById('repGroup').value;
+            
+            const successBlock = document.getElementById('successBlock');
+            const errorBlock = document.getElementById('adminErrorBlock');
+            
+            successBlock.style.display = 'none';
+            errorBlock.style.display = 'none';
 
-        if (!name || !login || !pass) {
-            errorBlock.textContent = "Заполните все поля формы!";
-            errorBlock.style.display = 'block';
-            return;
-        }
-
-        // Отправка POST-запроса на бэкенд
-        fetch('/api/create-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, login, pass, group })
-        })
-        .then(res => {
-            if (res.ok) {
-                successBlock.style.display = 'block';
-                // Очистка полей после успешной отправки
-                document.getElementById('repName').value = '';
-                document.getElementById('repLogin').value = '';
-                document.getElementById('repPass').value = '';
-            } else {
-                errorBlock.textContent = "Ошибка сервера. Проверьте подключение к базе.";
+            if (!name || !login || !pass) {
+                errorBlock.textContent = "Заполните все поля!";
                 errorBlock.style.display = 'block';
+                return;
             }
-        })
-        .catch(() => {
-            errorBlock.textContent = "Ошибка сети. Сервер не ответил.";
-            errorBlock.style.display = 'block';
-        });
+
+            fetch('/api/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, login, pass, group })
+            })
+            .then(res => {
+                if (res.ok) {
+                    successBlock.style.display = 'block';
+                    document.getElementById('repName').value = '';
+                    document.getElementById('repLogin').value = '';
+                    document.getElementById('repPass').value = '';
+                } else {
+                    errorBlock.textContent = "Ошибка сервера.";
+                    errorBlock.style.display = 'block';
+                }
+            })
+            .catch(e => {
+                errorBlock.textContent = "Ошибка сети: " + e.message;
+                errorBlock.style.display = 'block';
+            });
+        } catch (err) {
+            alert("Ошибка в createRepresentative: " + err.message);
+        }
     }
 </script>
 </body>
