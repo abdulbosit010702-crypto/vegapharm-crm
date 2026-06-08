@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -27,13 +28,16 @@ pool.connect((err, client, release) => {
 // Настройка Телеграм-бота
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
 
-// Команда /start для бота
+// Автоматически определяем адрес нашего приложения на Render
+// Если переменная RENDER_EXTERNAL_URL не задана, используем заглушку
+const APP_URL = process.env.RENDER_EXTERNAL_URL || "https://vegapharm-crm.onrender.com";
+
+// Команда /start для бота — теперь ведет на наш реальный экран входа!
 bot.command("start", (ctx) => {
-  ctx.reply("Добро пожаловать в VegaPharm CRM", {
+  ctx.reply("Добро пожаловать в VegaPharm CRM. Нажмите кнопку ниже, чтобы войти в личный кабинет.", {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "Открыть кабинет", web_app: { url: "https://google.com" } }] 
-        // Вместо google.com потом вставим адрес нашего Mini App
+        [{ text: "Открыть кабинет", web_app: { url: APP_URL } }] 
       ]
     }
   });
@@ -42,34 +46,61 @@ bot.command("start", (ctx) => {
 // Запуск бота в фоновом режиме
 bot.start().catch(err => console.error('Ошибка запуска Телеграм-бота:', err));
 
+// --- РАЗДАЧА ИНТЕРФЕЙСА (ФРОНТЕНД) ---
+
+// Заставляем сервер отдавать файл index.html, который лежит в папке backend
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+
 // --- НАШИ API МАРШРУТЫ (ЭНДПОИНТЫ) ---
 
-// 1. Вход в систему (Авторизация)
+// API для создания нового медицинского представителя из панели администратора
+app.post('/api/create-user', async (req, res) => {
+  const { name, login, pass, group } = req.body;
+  
+  try {
+    // Хешируем (шифруем) пароль сотрудника для безопасности
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(pass, salt);
+
+    // Вставляем сотрудника в базу данных PostgreSQL
+    // (Убедись, что структура таблиц в БД соответствует этим колонкам)
+    await pool.query(
+      `INSERT INTO users (fio, username, password_hash, product_group_name) VALUES ($1, $2, $3, $4)`,
+      [name, login, passwordHash, group]
+    );
+
+    res.status(201).json({ success: true, message: 'Сотрудник успешно создан!' });
+  } catch (err) {
+    console.error('Ошибка при создании пользователя:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 1. Вход в систему (Авторизация обычных медпредов)
 app.post('/api/auth/login', async (req, res) => {
   const { login, password } = req.body;
   try {
     const userRes = await pool.query(
-      `SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.username = $1`, 
+      `SELECT * FROM users WHERE username = $1`, 
       [login]
     );
     if (userRes.rows.length === 0) return res.status(400).json({ message: 'Пользователь не найден' });
     
     const user = userRes.rows[0];
-    // Проверка пароля (в базе он хранится в зашифрованном виде)
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) return res.status(400).json({ message: 'Неверный пароль' });
 
-    const token = jwt.sign({ id: user.id, role: user.role_name }, process.env.JWT_SECRET, { expiresIn: '12h' });
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'SECRET_KEY', { expiresIn: '12h' });
     
     res.json({
       token,
       user: {
         id: user.id,
         fio: user.fio,
-        role: user.role_name,
-        region_id: user.region_id,
-        city_id: user.city_id,
-        product_group_id: user.product_group_id
+        group: user.product_group_name
       }
     });
   } catch (err) {
@@ -99,6 +130,6 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Запуск самого веб-сервера
+// Запуск веб-сервера
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Сервер бэкенда запущен и слушает порт ${PORT}`));
